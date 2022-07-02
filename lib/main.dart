@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:set_up/configs/app_constants.dart';
-import 'package:set_up/configs/routes.dart';
-import 'package:set_up/configs/style.dart';
+import 'package:contact_reminder/configs/app_constants.dart';
+import 'package:contact_reminder/configs/routes.dart';
+import 'package:contact_reminder/configs/style.dart';
 
 void main() {
   runApp(const MyApp());

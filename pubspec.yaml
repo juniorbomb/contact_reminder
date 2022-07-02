@@ -1,4 +1,4 @@
-name: set_up
+name: contact_reminder
 description: A new Flutter project.
 
 publish_to: 'none' 
@@ -11,6 +11,13 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  contacts_service: ^0.6.3
+  call_log: ^3.2.3
+  flutter_sms_inbox: ^1.0.1
+  provider: ^6.0.3
+  intl: ^0.17.0
+  timeago: ^3.2.2
+  auto_size_text: ^3.0.0
 
 
 dev_dependencies:

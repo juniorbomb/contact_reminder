@@ -1,4 +1,4 @@
-# set_up
+# contact_reminder
 
 A new Flutter project.
 
