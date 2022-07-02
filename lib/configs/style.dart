@@ -9,20 +9,20 @@ class Style {
   static ThemeData appTheme = ThemeData(
     primaryColor: ColorPallet.primaryColor,
     scaffoldBackgroundColor: ColorPallet.backgroundColor,
-    fontFamily: AppConstants.FONT_FAMILY,
+    // fontFamily: AppConstants.FONT_FAMILY,
     appBarTheme: const AppBarTheme(
-      backgroundColor: ColorPallet.transparent,
+      backgroundColor: ColorPallet.primaryColor,
       foregroundColor: ColorPallet.transparent,
       elevation: 0,
       iconTheme: IconThemeData(
-        color: ColorPallet.primaryColor,
+        color: ColorPallet.secondaryColor,
       ),
       titleTextStyle: TextStyle(
         color: ColorPallet.primaryColor,
       ),
     ),
     iconTheme: const IconThemeData(
-      color: ColorPallet.darkBlackColor,
+      color: ColorPallet.secondaryColor,
     ),
     textTheme: TextTheme(
       bodyText1: TextStyles.bodyText(),

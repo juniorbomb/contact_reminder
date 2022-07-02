@@ -2,7 +2,7 @@
 // ignore_for_file: constant_identifier_names
 
 import 'package:flutter/material.dart';
-import 'package:contact_reminder/screens/nav/nav.dart';
+import 'package:contact_reminder/screens/nav/nav_screen.dart';
 
 GlobalKey<NavigatorState>? navigatorKey = GlobalKey<NavigatorState>();
 

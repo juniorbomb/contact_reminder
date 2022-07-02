@@ -1,3 +1,4 @@
+import 'package:contact_reminder/configs/colors.dart';
 import 'package:flutter/material.dart';
 import 'dimensions.dart';
 
@@ -30,6 +31,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_DEFAULT,
       fontWeight: FontWeight.w400,
+      color: ColorPallet.darkBlackColor,
     );
   }
 
@@ -37,6 +39,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_15,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 
@@ -44,6 +47,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_LARGE,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 
@@ -51,6 +55,8 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_LARGE_18,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.secondaryColor,
+      letterSpacing: 1.05,
     );
   }
 
@@ -58,6 +64,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_LARGE_24,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 
@@ -65,6 +72,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_MAX_26,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 
@@ -72,6 +80,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_MAX_28,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 
@@ -79,6 +88,7 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_MAX,
       fontWeight: FontWeight.w600,
+      color: ColorPallet.whiteColor,
     );
   }
 }
