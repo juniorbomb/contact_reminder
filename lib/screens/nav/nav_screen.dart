@@ -27,15 +27,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text(
-          (_selectedPageIndex == 0 ? "Contact History" : "Settings")
-              .toUpperCase(),
-          style: Theme.of(context).textTheme.headline3,
-        ),
-      ),
+      // appBar: AppBar(
+      //   centerTitle: true,
+      //   title: Text(
+      //     (_selectedPageIndex == 0 ? "Contact History" : "Settings")
+      //         .toUpperCase(),
+      //     style: Theme.of(context).textTheme.headline3,
+      //   ),
+      // ),
       body: PageView.builder(
+        onPageChanged: (index){
+          setState(() {
+            _selectedPageIndex = index;
+          });
+        },
         itemBuilder: (_, index) {
           return _screens[_selectedPageIndex];
         },
@@ -45,7 +50,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
         onPressed: () {},
         child: const Icon(
           Icons.add,
-          color: ColorPallet.secondaryColor,
+          color: ColorPallet.whiteColor,
         ),
         backgroundColor: ColorPallet.primaryColor,
       ),
@@ -54,12 +59,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
         icons: iconList,
         activeIndex: _selectedPageIndex,
         gapLocation: GapLocation.center,
-        backgroundColor: ColorPallet.secondaryColor,
+        backgroundColor: ColorPallet.whiteColor,
         notchSmoothness: NotchSmoothness.smoothEdge,
         leftCornerRadius: 32,
         rightCornerRadius: 32,
-        activeColor: ColorPallet.whiteColor,
-        inactiveColor: ColorPallet.secondaryWhiteColor.withOpacity(0.7),
+        activeColor: ColorPallet.primaryColor,
+        inactiveColor: ColorPallet.greyColor,
         onTap: (index) => setState(() => _selectedPageIndex = index),
         //other params
       ),

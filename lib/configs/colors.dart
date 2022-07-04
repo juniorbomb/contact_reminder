@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class ColorPallet {
   // Theme color
-  // static const Color primaryColor = Color(0xff0A5A2B);
-  static const Color primaryColor = Color(0xff1cbd74);
+  static const Color primaryColor = Color(0xff0A5A2B);
+  // static const Color primaryColor = Color(0xff1cbd74);
   static const Color secondaryColor = Color(0xff013b47);
 
   static const Color backgroundColor = Color(0xffECEBED);
