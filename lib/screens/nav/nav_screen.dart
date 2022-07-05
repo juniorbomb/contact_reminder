@@ -27,16 +27,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   centerTitle: true,
-      //   title: Text(
-      //     (_selectedPageIndex == 0 ? "Contact History" : "Settings")
-      //         .toUpperCase(),
-      //     style: Theme.of(context).textTheme.headline3,
-      //   ),
-      // ),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          (_selectedPageIndex == 0 ? "Contact History" : "Settings")
+              .toUpperCase(),
+          style: Theme.of(context).textTheme.headline3,
+        ),
+      ),
       body: PageView.builder(
-        onPageChanged: (index){
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (index) {
           setState(() {
             _selectedPageIndex = index;
           });

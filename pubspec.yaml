@@ -19,9 +19,10 @@ dependencies:
   timeago: ^3.2.2
   auto_size_text: ^3.0.0
   permission_handler: ^10.0.0
-  workmanager: ^0.4.1
 
   animated_bottom_navigation_bar: ^1.0.0
+  pull_to_refresh: 
+  hive: 
 
 
 dev_dependencies:
@@ -50,9 +51,9 @@ flutter:
     - assets/images/
     - assets/language/
   fonts:
-    - family: arial
+    - family: ArchitectsDaughter
       fonts:
-        - asset: assets/fonts/arial.ttf
+        - asset: assets/fonts/ArchitectsDaughter-Regular.ttf
           # style: italic
           # weight: 700
 

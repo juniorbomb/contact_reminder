@@ -1,9 +1,17 @@
+import 'dart:developer';
+
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:call_log/call_log.dart';
-import 'package:contact_reminder/main.dart';
+import 'package:contact_reminder/configs/colors.dart';
+import 'package:contact_reminder/models/contact_log_model.dart';
+import 'package:contact_reminder/models/log_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:workmanager/workmanager.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+
+import '../../configs/dimensions.dart';
 
 class ContactScreen extends StatefulWidget {
   const ContactScreen({Key? key}) : super(key: key);
@@ -13,126 +21,216 @@ class ContactScreen extends StatefulWidget {
 }
 
 class _ContactScreenState extends State<ContactScreen> {
-
   final SmsQuery _query = SmsQuery();
-  List<SmsMessage> _messages = [];
-  Iterable<CallLogEntry> _callLogEntries = <CallLogEntry>[];
+  final RefreshController _refreshController =
+      RefreshController(initialRefresh: false);
+
+  bool _isLoading = false;
+
+  List<ContactLogModel> historyLog = [];
+  final List<String> numbers = [
+    "9727145814",
+    "9904703798",
+    "9104003314",
+    "7041132638",
+    "9898713397",
+    "8866627328"
+  ];
+  List<CallLogEntry> _callLogEntries = [];
 
   @override
-  void didChangeDependencies() async {
-    super.didChangeDependencies();
-
-  }
-
-  Future<Iterable<CallLogEntry>> _callLogs() async {
-    var now = DateTime.now();
-    int from = now.subtract(const Duration(days: 60)).millisecondsSinceEpoch;
-    int to = now.subtract(const Duration(days: 30)).millisecondsSinceEpoch;
-    return await CallLog.query(
-      dateFrom: from,
-      dateTo: to,
-      durationFrom: 0,
-      durationTo: 60,
-      name: 'name',
-      number: 'number',
-      // type: CallType.incoming,
-    );
-  }
-
-  Future _smsLogs() async {
-    var permission = await Permission.sms.status;
-    if (permission.isGranted) {
-      final messages = await _query.querySms(
-        kinds: [SmsQueryKind.inbox, SmsQueryKind.sent],
-         //pass number for particular sms(optional)
-        address: '+919824930348',
-        // Count of sms (0 if you want latest msg of above address)
-        count: 0,
-      );
-      debugPrint('sms inbox messages: ${messages.length}');
-
-      setState(() => _messages = messages);
-    } else {
-      await Permission.sms.request();
-    }
+  void initState() {
+    super.initState();
+    _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
-    const TextStyle mono = TextStyle(fontFamily: 'monospace');
     final List<Widget> children = <Widget>[];
-    for (CallLogEntry entry in _callLogEntries) {
-      children.add(
-        Column(
-          children: <Widget>[
-            const Divider(),
-            Text('F. NUMBER  : ${entry.formattedNumber}', style: mono),
-            Text('C.M. NUMBER: ${entry.cachedMatchedNumber}', style: mono),
-            Text('NUMBER     : ${entry.number}', style: mono),
-            Text('NAME       : ${entry.name}', style: mono),
-            Text('TYPE       : ${entry.callType}', style: mono),
-            Text('DATE       : ${DateTime.fromMillisecondsSinceEpoch(entry.timestamp??0)}',
-                style: mono),
-            Text('DURATION   : ${entry.duration}', style: mono),
-            Text('ACCOUNT ID : ${entry.phoneAccountId}', style: mono),
-            Text('SIM NAME   : ${entry.simDisplayName}', style: mono),
-          ],
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-        ),
-      );
-    }
+
     return Scaffold(
-      body: SingleChildScrollView(
-          child: Column(
-            children: <Widget>[
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final Iterable<CallLogEntry> result = await CallLog.query();
-                      setState(() {
-                        _callLogEntries = result;
-                      });
-                    },
-                    child: const Text('Get all'),
-                  ),
-                ),
-              ),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Workmanager().registerOneOffTask(
-                        DateTime.now().millisecondsSinceEpoch.toString(),
-                        'simpleTask',
-                        existingWorkPolicy: ExistingWorkPolicy.replace,
-                      );
-                    },
-                    child: const Text('Get all in background'),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ListView(
-                  shrinkWrap: true,
-                  physics:const NeverScrollableScrollPhysics(),
-                  children: children,
-                ),
-              )
-            ],
+      body: SmartRefresher(
+        enablePullDown: true,
+        enablePullUp: true,
+        header: const WaterDropMaterialHeader(
+          color: Colors.white,
+          backgroundColor: ColorPallet.primaryColor,
+          offset: -0,
+        ),
+        onRefresh: _onRefresh,
+        controller: _refreshController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ListView.separated(
+          itemCount: historyLog.length,
+          separatorBuilder: (context, index) => const Divider(),
+          itemBuilder: (context, index) {
+            final entry = historyLog[index];
+            return ContactLogItem(entry: entry);
+          },
+          shrinkWrap: true,
+        ),
+      ),
+    );
+  }
+
+  void _onRefresh() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      await _loadData();
+    } on Exception catch (e) {
+      log(e.toString());
+      _refreshController.loadFailed();
+    }
+    setState(() {
+      _isLoading = false;
+    });
+    // if failed,use refreshFailed()
+
+    _refreshController.refreshCompleted();
+  }
+
+  _loadData() async {
+    await _getCallLogs();
+    historyLog.clear();
+    for (var number in numbers) {
+      CallLogEntry? callLogEntry = await _getLastCallLogOf(number);
+      SmsMessage? smsMessage = await _getLastSmsLogOf(number);
+
+      ContactLogModel contactLogModel = ContactLogModel(
+        callType: CallType.unknown,
+        dateTime: DateTime.now(),
+        duration: 0,
+        message: "Unknown",
+        name: "Unknown",
+        number: number,
+        type: Type.call,
+        sender: "Unknown",
+      );
+
+      log(callLogEntry?.number ?? "name");
+      if (smsMessage != null && callLogEntry != null) {
+        if (smsMessage.date!
+                .difference(DateTime.fromMillisecondsSinceEpoch(
+                    callLogEntry.timestamp ?? 0))
+                .inMilliseconds >
+            0) {
+          contactLogModel = contactLogModel.copyWith(
+            sender: smsMessage.sender,
+            name: callLogEntry.name,
+            dateTime: smsMessage.date!,
+            message: smsMessage.body,
+            type: Type.sms,
+          );
+          historyLog.add(contactLogModel);
+          continue;
+        }
+      }
+      contactLogModel = contactLogModel.copyWith(
+        callType: callLogEntry?.callType,
+        dateTime:
+            DateTime.fromMillisecondsSinceEpoch(callLogEntry?.timestamp ?? 0),
+        type: Type.call,
+        duration: callLogEntry?.duration,
+        name: callLogEntry?.name,
+      );
+      historyLog.add(contactLogModel);
+    }
+
+    historyLog.sort(
+      (a, b) => b.dateTime.compareTo(a.dateTime),
+    );
+    setState(() {});
+  }
+
+  _getCallLogs() async {
+    final Iterable<CallLogEntry> result = await CallLog.query();
+    _callLogEntries = result.toList();
+  }
+
+  Future<CallLogEntry?> _getLastCallLogOf(number) async {
+    final result = (await CallLog.query(number: number)).toList();
+    return result.isNotEmpty ? result[0] : null;
+  }
+
+  Future<SmsMessage?> _getLastSmsLogOf(number) async {
+    SmsMessage? message;
+    var permission = await Permission.sms.status;
+    if (permission.isGranted) {
+      final messages = await _query.querySms(
+        kinds: [SmsQueryKind.inbox, SmsQueryKind.sent],
+        address: number,
+        count: 0,
+      );
+      if (messages.isNotEmpty) {
+        message = messages[0];
+      }
+    } else {
+      await Permission.sms.request();
+    }
+    return message;
+  }
+}
+
+class ContactLogItem extends StatelessWidget {
+  const ContactLogItem({
+    Key? key,
+    required this.entry,
+  }) : super(key: key);
+
+  final ContactLogModel entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        height: 40,
+        width: 40,
+        alignment: Alignment.center,
+        child: Icon(
+          entry.type == Type.call ? Icons.call : Icons.message,
+          color: ColorPallet.secondaryColor,
+        ),
+      ),
+      title: AutoSizeText(
+        entry.name,
+        style: const TextStyle(
+          fontSize: Dimensions.FONT_SIZE_LARGE,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          AutoSizeText(
+            entry.type == Type.call
+                ? entry.number
+                : entry.sender + ": " + entry.message,
+            style: TextStyle(
+              color: ColorPallet.blackColor.withOpacity(0.6),
+            ),
           ),
+          if (entry.type == Type.call) ...[
+            const SizedBox(width: 6),
+            Icon(
+              entry.callType == CallType.incoming
+                  ? Icons.phone_callback
+                  : entry.callType == CallType.outgoing
+                      ? Icons.phone_forwarded
+                      : Icons.phone,
+              color: ColorPallet.blackColor.withOpacity(0.6),
+              size: 12,
+            ),
+          ],
+        ],
+      ),
+      trailing: AutoSizeText(
+        DateFormat("d MMM hh:mm a").format(entry.dateTime),
+        style: TextStyle(
+          color: ColorPallet.blackColor.withOpacity(0.5),
         ),
-      
-      floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-          _smsLogs();
-        },
-          child: const Icon(Icons.refresh),
-        ),
+      ),
     );
   }
 }

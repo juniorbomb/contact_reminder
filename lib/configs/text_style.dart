@@ -55,8 +55,8 @@ class TextStyles {
     return const TextStyle(
       fontSize: Dimensions.FONT_SIZE_LARGE_18,
       fontWeight: FontWeight.w600,
-      color: ColorPallet.secondaryColor,
-      letterSpacing: 1.05,
+      color: ColorPallet.whiteColor,
+      letterSpacing: 1.025,
     );
   }
 

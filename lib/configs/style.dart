@@ -9,7 +9,7 @@ class Style {
   static ThemeData appTheme = ThemeData(
     primaryColor: ColorPallet.primaryColor,
     scaffoldBackgroundColor: ColorPallet.backgroundColor,
-    // fontFamily: AppConstants.FONT_FAMILY,
+    fontFamily: AppConstants.FONT_FAMILY,
     appBarTheme: const AppBarTheme(
       backgroundColor: ColorPallet.primaryColor,
       foregroundColor: ColorPallet.transparent,
