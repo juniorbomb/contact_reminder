@@ -155,13 +155,23 @@ class _ContactScreenState extends State<ContactScreen> {
   }
 
   _getCallLogs() async {
-    final Iterable<CallLogEntry> result = await CallLog.query();
-    _callLogEntries = result.toList();
+    final status = await Permission.phone.status;
+    if (status.isGranted) {
+      final Iterable<CallLogEntry> result = await CallLog.query();
+      _callLogEntries = result.toList();
+    } else {
+      await Permission.phone.request();
+    }
   }
 
   Future<CallLogEntry?> _getLastCallLogOf(number) async {
-    final result = (await CallLog.query(number: number)).toList();
-    return result.isNotEmpty ? result[0] : null;
+    final status = await Permission.phone.status;
+    if (status.isGranted) {
+      final result = (await CallLog.query(number: number)).toList();
+      return result.isNotEmpty ? result[0] : null;
+    }else{
+      await Permission.phone.request();
+    }
   }
 
   Future<SmsMessage?> _getLastSmsLogOf(number) async {

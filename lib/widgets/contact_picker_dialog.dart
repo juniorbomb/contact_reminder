@@ -39,8 +39,8 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
       // _database.getAll();
       _searchController.addListener(searchListener);
       final status = await Permission.contacts.status;
-      if (status.isDenied) {
-        if ((await Permission.contacts.request()) == PermissionStatus.denied) {
+      if (status.isDenied||status.isPermanentlyDenied) {
+        if ((await Permission.contacts.request()) == PermissionStatus.denied || (await Permission.contacts.request()) == PermissionStatus.permanentlyDenied) {
           SnackBar snackBar =
               const SnackBar(content: Text("Contact permission required"));
           ScaffoldMessenger.of(context).clearSnackBars();
