@@ -6,6 +6,13 @@ class SettingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          "Settings".toUpperCase(),
+          style: Theme.of(context).textTheme.headline3,
+        ),
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:contact_reminder/configs/app_constants.dart';
 import 'package:contact_reminder/configs/routes.dart';
 import 'package:contact_reminder/configs/style.dart';
-// import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
 
 void main() {
-  // SmsQuery query = SmsQuery();
-  runApp(const MyApp());
+  runApp(
+    const MyApp(),
+  );
 }
 
 class MyApp extends StatelessWidget {

@@ -12,6 +12,7 @@ class ColorPallet {
   static const Color blackColor = Color(0xff000000);
   static const Color darkBlackColor = Color(0xff181A1C);
   static const Color secondaryDarkBlackColor = Color(0xff323436);
+  static const Color blackShadowColor = Colors.black12;
 
   static const Color whiteColor = Color(0xffffffff);
   static const Color secondaryWhiteColor = Color(0xffECEBED);

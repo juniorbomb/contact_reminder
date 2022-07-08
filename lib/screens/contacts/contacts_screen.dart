@@ -49,9 +49,16 @@ class _ContactScreenState extends State<ContactScreen> {
     final List<Widget> children = <Widget>[];
 
     return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text(
+          "Contact History".toUpperCase(),
+          style: Theme.of(context).textTheme.headline3,
+        ),
+      ),
       body: SmartRefresher(
         enablePullDown: true,
-        enablePullUp: true,
+        // enablePullUp: true, // for loading
         header: const WaterDropMaterialHeader(
           color: Colors.white,
           backgroundColor: ColorPallet.primaryColor,
@@ -65,7 +72,10 @@ class _ContactScreenState extends State<ContactScreen> {
           separatorBuilder: (context, index) => const Divider(),
           itemBuilder: (context, index) {
             final entry = historyLog[index];
-            return ContactLogItem(entry: entry);
+            return ContactLogItem(
+              entry: entry,
+              key: ValueKey(entry.number),
+            );
           },
           shrinkWrap: true,
         ),
