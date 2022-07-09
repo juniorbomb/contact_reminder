@@ -1,11 +1,14 @@
 import 'dart:developer';
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:contact_reminder/configs/app_constants.dart';
+import 'package:contact_reminder/models/contact.dart';
 import 'package:contact_reminder/services/databse.dart';
 import 'package:contact_reminder/widgets/theme_text_field.dart';
 import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../configs/colors.dart';
@@ -49,9 +52,17 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
           return;
         }
       }
-      ContactsService.getContacts().then((value) {
+      ContactsService.getContacts().then((value) async {
         _contacts.clear();
+        List<ContactModel> dbList = await contactFromDb();
         _contacts.addAll(value);
+
+        for (var element in _contacts) {
+            if (dbList.indexWhere((e) => e.identifier == element.identifier) !=
+                -1) {
+              _selectedContact.add(element);
+            }
+          }
         setState(() {});
       });
     }
@@ -175,10 +186,7 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
 
                               key: ValueKey(index),
                               value: _selectedContact.indexWhere(
-                                      (element) =>
-                                          element.phones ==
-                                          _contacts[index].phones,
-                                      0) !=
+                                      (element) => element.phones == _contacts[index].phones,0) !=
                                   -1,
                               onChanged: (value) => onChange(value, index),
                             ),
@@ -231,7 +239,7 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
     log(searchText);
     _searchResult.addAll(_contacts
         .where((element) =>
-            (element.displayName?.contains(searchText) ?? false) ||
+            (element.displayName?.toLowerCase().contains(searchText.toLowerCase()) ?? false) ||
             ((element.phones?.length ?? 0) > 0
                 ? element.phones?.first.value?.contains(searchText) ?? false
                 : false))
@@ -249,5 +257,36 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
     setState(() {});
   }
 
-  onSave() {}
+  Future<Box> openHiveBox(String boxName) async {
+    if (!kIsWeb && !Hive.isBoxOpen(boxName)) {
+      Hive.init((await getApplicationDocumentsDirectory()).path);
+      Hive.registerAdapter(ContactModelAdapter());
+    }
+    return await Hive.openBox(boxName);
+  }
+
+  Future<List<ContactModel>> contactFromDb() async {
+    var box = await openHiveBox('my_contacts');
+    return box.isNotEmpty ? box.get(0) : [];
+  }
+
+  onSave() async {
+    var box = await openHiveBox('my_contacts');
+    await box.clear();
+    List<ContactModel> model = [];
+    _selectedContact.forEach((element) {
+      print("identifier --> ${element.identifier}");
+      model.add(ContactModel(
+          name: element.displayName,
+          number: (element.phones?.isNotEmpty ?? false)
+              ? element.phones?.first.value
+              : "",
+          createdDate: DateTime.now(),
+          identifier: element.identifier));
+    });
+    setState(() {});
+    await box.add(model);
+    List<ContactModel> dbList = [];
+    dbList = box.getAt(0);
+  }
 }

@@ -3,11 +3,15 @@ import 'dart:developer';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:call_log/call_log.dart';
 import 'package:contact_reminder/configs/colors.dart';
+import 'package:contact_reminder/models/contact.dart';
 import 'package:contact_reminder/models/contact_log_model.dart';
 import 'package:contact_reminder/models/log_type.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
@@ -190,6 +194,19 @@ class _ContactScreenState extends State<ContactScreen> {
       await Permission.sms.request();
     }
     return message;
+  }
+
+  Future<List<ContactModel>> contactFromDb() async {
+    var box = await openHiveBox('my_contacts');
+    return box.isNotEmpty ? box.get(0) : [];
+  }
+
+  Future<Box> openHiveBox(String boxName) async {
+    if (!kIsWeb && !Hive.isBoxOpen(boxName)) {
+      Hive.init((await getApplicationDocumentsDirectory()).path);
+      Hive.registerAdapter(ContactModelAdapter());
+    }
+    return await Hive.openBox(boxName);
   }
 }
 
