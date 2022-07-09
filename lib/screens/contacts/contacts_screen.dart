@@ -2,10 +2,12 @@ import 'dart:developer';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:call_log/call_log.dart';
+import 'package:contact_reminder/configs/app_constants.dart';
 import 'package:contact_reminder/configs/colors.dart';
 import 'package:contact_reminder/models/contact.dart';
 import 'package:contact_reminder/models/contact_log_model.dart';
 import 'package:contact_reminder/models/log_type.dart';
+import 'package:contact_reminder/widgets/shimmer_view/get_shimmer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
@@ -32,13 +34,13 @@ class _ContactScreenState extends State<ContactScreen> {
   bool _isLoading = false;
 
   List<ContactLogModel> historyLog = [];
-  final List<String> numbers = [
-    "9727145814",
-    "9904703798",
-    "9104003314",
-    "7041132638",
-    "9898713397",
-    "8866627328"
+  List<ContactModel> numbers = [
+    // "9727145814",
+    // "9904703798",
+    // "9104003314",
+    // "7041132638",
+    // "9898713397",
+    // "8866627328"
   ];
   List<CallLogEntry> _callLogEntries = [];
 
@@ -71,7 +73,18 @@ class _ContactScreenState extends State<ContactScreen> {
         onRefresh: _onRefresh,
         controller: _refreshController,
         physics: const AlwaysScrollableScrollPhysics(),
-        child: ListView.separated(
+        child: !_isLoading
+            ? historyLog.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No contacts found",
+                      style: TextStyle(
+                        fontSize: Dimensions.FONT_SIZE_LARGE,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                : ListView.separated(
           itemCount: historyLog.length,
           separatorBuilder: (context, index) => const Divider(),
           itemBuilder: (context, index) {
@@ -82,6 +95,16 @@ class _ContactScreenState extends State<ContactScreen> {
             );
           },
           shrinkWrap: true,
+        ): Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+          child: ListView.separated(
+            itemCount: 20,
+            separatorBuilder: (context, index) => const Divider(),
+            itemBuilder: (context, index) {
+              return getContactShimmer(context, false);
+            },
+            shrinkWrap: true,
+          ),
         ),
       ),
     );
@@ -106,19 +129,22 @@ class _ContactScreenState extends State<ContactScreen> {
   }
 
   _loadData() async {
+    setState(() => _isLoading = true);
     await _getCallLogs();
     historyLog.clear();
+    numbers.clear();
+    numbers = await contactFromDb();
     for (var number in numbers) {
-      CallLogEntry? callLogEntry = await _getLastCallLogOf(number);
-      SmsMessage? smsMessage = await _getLastSmsLogOf(number);
+      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number??"");
+      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number??"");
 
       ContactLogModel contactLogModel = ContactLogModel(
         callType: CallType.unknown,
         dateTime: DateTime.now(),
         duration: 0,
         message: "Unknown",
-        name: "Unknown",
-        number: number,
+        name: number.name??"",
+        number: number.number??"",
         type: Type.call,
         sender: "Unknown",
       );
@@ -155,7 +181,7 @@ class _ContactScreenState extends State<ContactScreen> {
     historyLog.sort(
       (a, b) => b.dateTime.compareTo(a.dateTime),
     );
-    setState(() {});
+    setState(() => _isLoading = false);
   }
 
   _getCallLogs() async {
@@ -197,8 +223,16 @@ class _ContactScreenState extends State<ContactScreen> {
   }
 
   Future<List<ContactModel>> contactFromDb() async {
-    var box = await openHiveBox('my_contacts');
-    return box.isNotEmpty ? box.get(0) : [];
+    var box = await openHiveBox(AppConstants.DATABASE_NAME);
+    // await box.clear();
+    print("Db Data --> ${box.get(0)}");
+    List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
+    List<ContactModel> modelList = [];
+    for(var c in list){
+      c as ContactModel;
+      modelList.add(c);
+    }
+    return modelList;
   }
 
   Future<Box> openHiveBox(String boxName) async {

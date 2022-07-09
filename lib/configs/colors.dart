@@ -20,4 +20,6 @@ class ColorPallet {
   static const Color greyColor = Color(0xffC5C6D0);
 
   static const Color transparent = Colors.transparent;
+  static var shimmerColor = Colors.grey[400] ?? Colors.grey;
+
 }

@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:contact_reminder/configs/app_constants.dart';
 import 'package:contact_reminder/models/contact.dart';
 import 'package:contact_reminder/services/databse.dart';
 import 'package:contact_reminder/widgets/theme_text_field.dart';
@@ -266,12 +267,18 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
   }
 
   Future<List<ContactModel>> contactFromDb() async {
-    var box = await openHiveBox('my_contacts');
-    return box.isNotEmpty ? box.get(0) : [];
+    var box = await openHiveBox(AppConstants.DATABASE_NAME);
+     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
+    List<ContactModel> modelList = [];
+    for(var c in list){
+      c as ContactModel;
+      modelList.add(c);
+    }
+    return modelList;
   }
 
   onSave() async {
-    var box = await openHiveBox('my_contacts');
+    var box = await openHiveBox(AppConstants.DATABASE_NAME);
     await box.clear();
     List<ContactModel> model = [];
     _selectedContact.forEach((element) {
@@ -284,9 +291,7 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
           createdDate: DateTime.now(),
           identifier: element.identifier));
     });
-    setState(() {});
     await box.add(model);
-    List<ContactModel> dbList = [];
-    dbList = box.getAt(0);
+    Navigator.pop(context);
   }
 }
