@@ -43,8 +43,10 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
       // _database.getAll();
       _searchController.addListener(searchListener);
       final status = await Permission.contacts.status;
-      if (status.isDenied||status.isPermanentlyDenied) {
-        if ((await Permission.contacts.request()) == PermissionStatus.denied || (await Permission.contacts.request()) == PermissionStatus.permanentlyDenied) {
+      if (status.isDenied || status.isPermanentlyDenied) {
+        if ((await Permission.contacts.request()) == PermissionStatus.denied ||
+            (await Permission.contacts.request()) ==
+                PermissionStatus.permanentlyDenied) {
           SnackBar snackBar =
               const SnackBar(content: Text("Contact permission required"));
           ScaffoldMessenger.of(context).clearSnackBars();
@@ -59,11 +61,11 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
         _contacts.addAll(value);
 
         for (var element in _contacts) {
-            if (dbList.indexWhere((e) => e.identifier == element.identifier) !=
-                -1) {
-              _selectedContact.add(element);
-            }
+          if (dbList.indexWhere((e) => e.identifier == element.identifier) !=
+              -1) {
+            _selectedContact.add(element);
           }
+        }
         setState(() {});
       });
     }
@@ -112,9 +114,10 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: _contacts.isEmpty
-                ? Center(
+          _contacts.isEmpty
+              ? SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.3,
+                  child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
@@ -132,86 +135,91 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                         ),
                       ],
                     ),
-                  )
-                : _searchController.text.isNotEmpty
-                    ? ListView.builder(
-                        itemCount: _searchResult.length,
-                        itemBuilder: (context, index) {
-                          final contact = _searchResult[0];
-                          return ListTile(
-                            key: ValueKey(index),
-                            leading: Checkbox(
-                              checkColor: ColorPallet.whiteColor,
-                              activeColor: ColorPallet.primaryColor,
-                              // fillColor: ColorPallet.primaryColor,
-
+                  ),
+                )
+              : Expanded(
+                  child: _searchController.text.isNotEmpty
+                      ? ListView.builder(
+                          itemCount: _searchResult.length,
+                          itemBuilder: (context, index) {
+                            final contact = _searchResult[0];
+                            return ListTile(
                               key: ValueKey(index),
-                              value: _selectedContact.indexWhere(
-                                      (element) =>
-                                          element.phones ==
-                                          _contacts[index].phones,
-                                      0) !=
-                                  -1,
-                              onChanged: (value) => onChange(value, index),
-                            ),
-                            title: AutoSizeText(
-                              contact.displayName.toString(),
-                              style: const TextStyle(
-                                fontSize: Dimensions.FONT_SIZE_LARGE,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: (contact.phones == null ||
-                                    (contact.phones?.isEmpty ?? false))
-                                ? null
-                                : AutoSizeText(
-                                    contact.phones!.first.value.toString(),
-                                    style: TextStyle(
-                                      color: ColorPallet.blackColor
-                                          .withOpacity(0.6),
-                                    ),
-                                  ),
-                          );
-                        },
-                      )
-                    : ListView.builder(
-                        itemCount: _contacts.length,
-                        itemBuilder: (context, index) {
-                          final contact = _contacts[index];
-                          return ListTile(
-                            key: ValueKey(index),
-                            leading: Checkbox(
-                              checkColor: ColorPallet.whiteColor,
-                              activeColor: ColorPallet.primaryColor,
-                              // fillColor: ColorPallet.primaryColor,
+                              leading: Checkbox(
+                                checkColor: ColorPallet.whiteColor,
+                                activeColor: ColorPallet.primaryColor,
+                                // fillColor: ColorPallet.primaryColor,
 
-                              key: ValueKey(index),
-                              value: _selectedContact.indexWhere(
-                                      (element) => element.phones == _contacts[index].phones,0) !=
-                                  -1,
-                              onChanged: (value) => onChange(value, index),
-                            ),
-                            title: AutoSizeText(
-                              contact.displayName.toString(),
-                              style: const TextStyle(
-                                fontSize: Dimensions.FONT_SIZE_LARGE,
-                                fontWeight: FontWeight.w600,
+                                key: ValueKey(index),
+                                value: _selectedContact.indexWhere(
+                                        (element) =>
+                                            element.identifier ==
+                                            _contacts[index].identifier,
+                                        0) !=
+                                    -1,
+                                onChanged: (value) => onChange(value, index),
                               ),
-                            ),
-                            subtitle: (contact.phones == null ||
-                                    (contact.phones?.isEmpty ?? false))
-                                ? null
-                                : AutoSizeText(
-                                    contact.phones!.first.value.toString(),
-                                    style: TextStyle(
-                                      color: ColorPallet.blackColor
-                                          .withOpacity(0.6),
+                              title: AutoSizeText(
+                                contact.displayName.toString(),
+                                style: const TextStyle(
+                                  fontSize: Dimensions.FONT_SIZE_LARGE,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: (contact.phones == null ||
+                                      (contact.phones?.isEmpty ?? false))
+                                  ? null
+                                  : AutoSizeText(
+                                      contact.phones!.first.value.toString(),
+                                      style: TextStyle(
+                                        color: ColorPallet.blackColor
+                                            .withOpacity(0.6),
+                                      ),
                                     ),
-                                  ),
-                          );
-                        },
-                      ),
-          ),
+                            );
+                          },
+                        )
+                      : ListView.builder(
+                          itemCount: _contacts.length,
+                          itemBuilder: (context, index) {
+                            final contact = _contacts[index];
+                            return ListTile(
+                              key: ValueKey(index),
+                              leading: Checkbox(
+                                checkColor: ColorPallet.whiteColor,
+                                activeColor: ColorPallet.primaryColor,
+                                // fillColor: ColorPallet.primaryColor,
+
+                                key: ValueKey(index),
+                                value: _selectedContact.indexWhere(
+                                        (element) =>
+                                            element.phones ==
+                                            _contacts[index].phones,
+                                        0) !=
+                                    -1,
+                                onChanged: (value) => onChange(value, index),
+                              ),
+                              title: AutoSizeText(
+                                contact.displayName.toString(),
+                                style: const TextStyle(
+                                  fontSize: Dimensions.FONT_SIZE_LARGE,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              subtitle: (contact.phones == null ||
+                                      (contact.phones?.isEmpty ?? false))
+                                  ? null
+                                  : AutoSizeText(
+                                      contact.phones!.first.value.toString(),
+                                      style: TextStyle(
+                                        color: ColorPallet.blackColor
+                                            .withOpacity(0.6),
+                                      ),
+                                    ),
+                            );
+                          },
+                        ),
+                ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
@@ -240,7 +248,10 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
     log(searchText);
     _searchResult.addAll(_contacts
         .where((element) =>
-            (element.displayName?.toLowerCase().contains(searchText.toLowerCase()) ?? false) ||
+            (element.displayName
+                    ?.toLowerCase()
+                    .contains(searchText.toLowerCase()) ??
+                false) ||
             ((element.phones?.length ?? 0) > 0
                 ? element.phones?.first.value?.contains(searchText) ?? false
                 : false))
@@ -268,9 +279,9 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
 
   Future<List<ContactModel>> contactFromDb() async {
     var box = await openHiveBox(AppConstants.DATABASE_NAME);
-     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
+    List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
     List<ContactModel> modelList = [];
-    for(var c in list){
+    for (var c in list) {
       c as ContactModel;
       modelList.add(c);
     }

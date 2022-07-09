@@ -1,37 +1,44 @@
 import 'package:contact_reminder/configs/colors.dart';
 import 'package:flutter/material.dart';
 
+import '../../configs/dimensions.dart';
 import 'shimmer_view.dart';
 
 getContactShimmer(BuildContext context, isPadding) {
+  final highLightColor = ColorPallet.primaryColor.withOpacity(0.1);
+  final greyColor = Colors.grey.withOpacity(0.1);
   return Shimmer.fromColors(
-    highlightColor: Colors.white10,
-    baseColor: Colors.grey.shade400,
+    highlightColor: highLightColor,
+    baseColor: greyColor,
     enabled: true,
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12,vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.black45,),
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.black45,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Container(
-            height: 20,
-            width: 20,
+            height: 40,
+            width: 40,
             margin: const EdgeInsets.only(right: 12),
-            color: Colors.grey,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              color: Colors.grey,
+            ),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 8,
+                  height: Dimensions.FONT_SIZE_LARGE,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(5),
-                  color: Colors.grey,
+                    color: Colors.grey,
                   ),
                   width: MediaQuery.of(context).size.width * 0.3,
                 ),
@@ -39,10 +46,10 @@ getContactShimmer(BuildContext context, isPadding) {
                   height: 5,
                 ),
                 Container(
-                 height: 8,
+                  height: Dimensions.FONT_SIZE_DEFAULT,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(5),
-                  color: Colors.grey,
+                    color: Colors.grey,
                   ),
                   width: MediaQuery.of(context).size.width * 0.4,
                 ),
@@ -53,11 +60,11 @@ getContactShimmer(BuildContext context, isPadding) {
             alignment: Alignment.center,
             child: Container(
               width: 80,
-              height: 8,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5),
-                  color: Colors.grey,
-                  ),
+              height: Dimensions.FONT_SIZE_LARGE,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                color: Colors.grey,
+              ),
             ),
           ),
         ],

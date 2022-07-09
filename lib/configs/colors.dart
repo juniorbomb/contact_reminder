@@ -21,5 +21,5 @@ class ColorPallet {
 
   static const Color transparent = Colors.transparent;
   static var shimmerColor = Colors.grey[400] ?? Colors.grey;
-
+  static const redColor = Colors.red;
 }

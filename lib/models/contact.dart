@@ -4,10 +4,7 @@ part 'contact.g.dart';
 
 @HiveType(typeId: 0)
 class ContactModel extends HiveObject {
-
-  ContactModel(
-    {this.name,this.number,this.createdDate,this.identifier}
-  );
+  ContactModel({this.name, this.number, this.createdDate, this.identifier});
 
   @HiveField(0)
   String? name;
@@ -20,4 +17,6 @@ class ContactModel extends HiveObject {
 
   @HiveField(3)
   String? identifier;
+
+  get dateTime => null;
 }

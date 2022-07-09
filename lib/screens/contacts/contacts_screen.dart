@@ -34,14 +34,7 @@ class _ContactScreenState extends State<ContactScreen> {
   bool _isLoading = false;
 
   List<ContactLogModel> historyLog = [];
-  List<ContactModel> numbers = [
-    // "9727145814",
-    // "9904703798",
-    // "9104003314",
-    // "7041132638",
-    // "9898713397",
-    // "8866627328"
-  ];
+  List<ContactModel> numbers = [];
   List<CallLogEntry> _callLogEntries = [];
 
   @override
@@ -73,7 +66,7 @@ class _ContactScreenState extends State<ContactScreen> {
         onRefresh: _onRefresh,
         controller: _refreshController,
         physics: const AlwaysScrollableScrollPhysics(),
-        child: !_isLoading
+        child: _isLoading
             ? historyLog.isEmpty
                 ? const Center(
                     child: Text(
@@ -85,27 +78,29 @@ class _ContactScreenState extends State<ContactScreen> {
                     ),
                   )
                 : ListView.separated(
-          itemCount: historyLog.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) {
-            final entry = historyLog[index];
-            return ContactLogItem(
-              entry: entry,
-              key: ValueKey(entry.number),
-            );
-          },
-          shrinkWrap: true,
-        ): Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
-          child: ListView.separated(
-            itemCount: 20,
-            separatorBuilder: (context, index) => const Divider(),
-            itemBuilder: (context, index) {
-              return getContactShimmer(context, false);
-            },
-            shrinkWrap: true,
-          ),
-        ),
+                    itemCount: historyLog.length,
+                    separatorBuilder: (context, index) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final entry = historyLog[index];
+                      return ContactLogItem(
+                        entry: entry,
+                        key: ValueKey(entry.number),
+                      );
+                    },
+                    shrinkWrap: true,
+                  )
+            : Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: ListView.separated(
+                  itemCount: 20,
+                  separatorBuilder: (context, index) => const Divider(),
+                  itemBuilder: (context, index) {
+                    return getContactShimmer(context, false);
+                  },
+                  shrinkWrap: true,
+                ),
+              ),
       ),
     );
   }
@@ -135,16 +130,16 @@ class _ContactScreenState extends State<ContactScreen> {
     numbers.clear();
     numbers = await contactFromDb();
     for (var number in numbers) {
-      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number??"");
-      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number??"");
+      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number ?? "");
+      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number ?? "");
 
       ContactLogModel contactLogModel = ContactLogModel(
         callType: CallType.unknown,
         dateTime: DateTime.now(),
         duration: 0,
         message: "Unknown",
-        name: number.name??"",
-        number: number.number??"",
+        name: number.name ?? "",
+        number: number.number ?? "",
         type: Type.call,
         sender: "Unknown",
       );
@@ -199,7 +194,7 @@ class _ContactScreenState extends State<ContactScreen> {
     if (status.isGranted) {
       final result = (await CallLog.query(number: number)).toList();
       return result.isNotEmpty ? result[0] : null;
-    }else{
+    } else {
       await Permission.phone.request();
     }
   }
@@ -228,7 +223,7 @@ class _ContactScreenState extends State<ContactScreen> {
     print("Db Data --> ${box.get(0)}");
     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
     List<ContactModel> modelList = [];
-    for(var c in list){
+    for (var c in list) {
       c as ContactModel;
       modelList.add(c);
     }

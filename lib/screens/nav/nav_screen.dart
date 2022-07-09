@@ -1,7 +1,7 @@
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
 import 'package:contact_reminder/configs/colors.dart';
 import 'package:contact_reminder/screens/contacts/contacts_screen.dart';
-import 'package:contact_reminder/screens/settings/settings_screen.dart';
+import 'package:contact_reminder/screens/track/track_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/contact_picker_dialog.dart';
@@ -17,13 +17,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _selectedPageIndex = 0;
   final iconList = [
     Icons.call,
-    Icons.settings,
+    Icons.people_alt_rounded,
   ];
   final _screens = [
     const ContactScreen(
       key: ValueKey("Contacts"),
     ),
-    const SettingScreen(
+    const TrackScreen(
       key: ValueKey("Settings"),
     ),
   ];
@@ -32,7 +32,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: PageView.builder(
-        // physics: const NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (index) {
           setState(() {
             _selectedPageIndex = index;
