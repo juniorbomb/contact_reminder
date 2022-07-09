@@ -66,7 +66,7 @@ class _ContactScreenState extends State<ContactScreen> {
         onRefresh: _onRefresh,
         controller: _refreshController,
         physics: const AlwaysScrollableScrollPhysics(),
-        child: _isLoading
+        child: !_isLoading
             ? historyLog.isEmpty
                 ? const Center(
                     child: Text(
