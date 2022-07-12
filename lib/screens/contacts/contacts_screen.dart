@@ -161,6 +161,16 @@ class _ContactScreenState extends State<ContactScreen> {
           historyLog.add(contactLogModel);
           continue;
         }
+      } else if (smsMessage != null) {
+        contactLogModel = contactLogModel.copyWith(
+          sender: smsMessage.sender,
+          name: number.name,
+          dateTime: smsMessage.date!,
+          message: smsMessage.body,
+          type: Type.sms,
+        );
+        historyLog.add(contactLogModel);
+        continue;
       }
       contactLogModel = contactLogModel.copyWith(
         callType: callLogEntry?.callType,
@@ -197,6 +207,7 @@ class _ContactScreenState extends State<ContactScreen> {
     } else {
       await Permission.phone.request();
     }
+    return null;
   }
 
   Future<SmsMessage?> _getLastSmsLogOf(number) async {
@@ -220,7 +231,7 @@ class _ContactScreenState extends State<ContactScreen> {
   Future<List<ContactModel>> contactFromDb() async {
     var box = await openHiveBox(AppConstants.DATABASE_NAME);
     // await box.clear();
-    print("Db Data --> ${box.get(0)}");
+
     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
     List<ContactModel> modelList = [];
     for (var c in list) {
@@ -272,7 +283,7 @@ class ContactLogItem extends StatelessWidget {
           AutoSizeText(
             entry.type == Type.call
                 ? entry.number
-                : entry.sender + ": " + entry.message,
+                : "Message: " + entry.message,
             style: TextStyle(
               color: ColorPallet.blackColor.withOpacity(0.6),
             ),

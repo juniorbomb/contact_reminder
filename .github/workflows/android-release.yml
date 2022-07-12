@@ -25,17 +25,18 @@ jobs:
     - run: flutter pub get
     - run: flutter build apk --release
 
-    - name: Upload to actions
-      uses: actions/upload-artifact@v2
-      with:
-        path: build/app/outputs/flutter-apk/app-release.apk
-        name: release-apk
+    # - name: Upload to actions
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     path: build/app/outputs/flutter-apk/app-release.apk
+    #     name: release-apk
 
-    - name: Create a Release in GitHub  
-      uses: ncipollo/release-action@v1
-      with:
-        artifacts: build/app/outputs/flutter-apk/app-release.apk
-        token: ${{ secrets.GH_TOKEN }}
-        tag: ${{ steps.version.outputs.content }}
-        commit: ${{ github.sha }}
+
+    # - name: Create a Release in GitHub  
+    #   uses: ncipollo/release-action@v1
+    #   with:
+    #     artifacts: build/app/outputs/flutter-apk/app-release.apk
+    #     token: ${{ secrets.GH_TOKEN }}
+    #     tag: ${{ steps.version.outputs.content }}
+    #     commit: ${{ github.sha }}
 
