@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'contact.dart';
+part of 'contact_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
@@ -8,7 +8,7 @@ part of 'contact.dart';
 
 class ContactModelAdapter extends TypeAdapter<ContactModel> {
   @override
-  final int typeId = 0;
+  final int typeId = 1;
 
   @override
   ContactModel read(BinaryReader reader) {
@@ -17,25 +17,57 @@ class ContactModelAdapter extends TypeAdapter<ContactModel> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return ContactModel(
-      name: fields[0] as String?,
-      number: fields[1] as String?,
-      createdDate: fields[2] as DateTime?,
-      identifier: fields[3] as String?,
-    );
+      displayName: fields[1] as String?,
+      givenName: fields[2] as String?,
+      middleName: fields[3] as String?,
+      prefix: fields[4] as String?,
+      suffix: fields[5] as String?,
+      familyName: fields[6] as String?,
+      company: fields[7] as String?,
+      jobTitle: fields[8] as String?,
+      emails: (fields[11] as List?)?.cast<Item>(),
+      phones: (fields[12] as List?)?.cast<Item>(),
+      avatar: fields[13] as Uint8List?,
+      birthday: fields[14] as DateTime?,
+      androidAccountTypeRaw: fields[9] as String?,
+      androidAccountName: fields[10] as String?,
+    )..identifier = fields[0] as String?;
   }
 
   @override
   void write(BinaryWriter writer, ContactModel obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(15)
       ..writeByte(0)
-      ..write(obj.name)
+      ..write(obj.identifier)
       ..writeByte(1)
-      ..write(obj.number)
+      ..write(obj.displayName)
       ..writeByte(2)
-      ..write(obj.createdDate)
+      ..write(obj.givenName)
       ..writeByte(3)
-      ..write(obj.identifier);
+      ..write(obj.middleName)
+      ..writeByte(4)
+      ..write(obj.prefix)
+      ..writeByte(5)
+      ..write(obj.suffix)
+      ..writeByte(6)
+      ..write(obj.familyName)
+      ..writeByte(7)
+      ..write(obj.company)
+      ..writeByte(8)
+      ..write(obj.jobTitle)
+      ..writeByte(9)
+      ..write(obj.androidAccountTypeRaw)
+      ..writeByte(10)
+      ..write(obj.androidAccountName)
+      ..writeByte(11)
+      ..write(obj.emails)
+      ..writeByte(12)
+      ..write(obj.phones)
+      ..writeByte(13)
+      ..write(obj.avatar)
+      ..writeByte(14)
+      ..write(obj.birthday);
   }
 
   @override

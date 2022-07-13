@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:contact_reminder/services/databse.dart';
+import 'package:contact_reminder/services/toast_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -8,7 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../configs/app_constants.dart';
 import '../../configs/colors.dart';
 import '../../configs/dimensions.dart';
-import '../../models/contact.dart';
+import '../../models/track_contact_model.dart';
 
 class TrackScreen extends StatefulWidget {
   const TrackScreen({Key? key}) : super(key: key);
@@ -18,13 +22,15 @@ class TrackScreen extends StatefulWidget {
 }
 
 class _TrackScreenState extends State<TrackScreen> {
-  List<ContactModel> contacts = [];
+  List<TrackContactModel> contacts = [];
+  bool _isLoading = false;
 
   @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
-    contacts = await contactFromDb();
+    _isLoading = true;
     setState(() {});
+    _loadData();
   }
 
   @override
@@ -37,52 +43,159 @@ class _TrackScreenState extends State<TrackScreen> {
           style: Theme.of(context).textTheme.headline3,
         ),
       ),
-      body: contacts.isEmpty
-          ? Center(
-              child: Column(
+      body: Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          children: [
+            Visibility(
+              visible: contacts.isNotEmpty,
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(
-                    color: ColorPallet.primaryColor,
+                children: [
+                  const SizedBox(width: 12),
+                  Text(
+                    "Contacts: " + contacts.length.toString(),
+                    style: const TextStyle(
+                      color: ColorPallet.secondaryColor,
+                    ),
                   ),
-                  SizedBox(height: 12),
-                  AutoSizeText(
-                    "Loading...",
-                    style: TextStyle(
-                      color: ColorPallet.primaryColor,
-                      fontSize: Dimensions.FONT_SIZE_LARGE,
-                      fontWeight: FontWeight.w600,
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      ToastService.show("Long press to remove all");
+                    },
+                    onLongPress: () async {
+                      try {
+                        final box = await Database.openTrackBox();
+                        await box.clear();
+                        ToastService.show("Clear");
+                        await _loadData();
+                        setState(() {});
+                      } on Exception catch (e) {
+                        ToastService.show(
+                            "Something went wrong! try again later");
+                      }
+                    },
+                    child: const Text(
+                      "Remove all",
+                      style: TextStyle(
+                        color: ColorPallet.secondaryColor,
+                      ),
                     ),
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
-              itemCount: contacts.length,
-              itemBuilder: (context, index) {
-                final contact = contacts[index];
-                return ContactLogItem(
-                  contact: contact,
-                  onDismissed: () async {
-                    contacts.removeWhere(
-                        (element) => element.identifier == contact.identifier);
-                    await onDelete();
-                    setState(() {});
-                  },
-                );
-              },
             ),
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          CircularProgressIndicator(
+                            color: ColorPallet.primaryColor,
+                          ),
+                          SizedBox(height: 12),
+                          AutoSizeText(
+                            "Loading...",
+                            style: TextStyle(
+                              color: ColorPallet.primaryColor,
+                              fontSize: Dimensions.FONT_SIZE_LARGE,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : contacts.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 150 - 8),
+                              const Spacer(),
+                              const AutoSizeText(
+                                "No contacts found",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: ColorPallet.darkBlackColor,
+                                  fontSize: Dimensions.FONT_SIZE_LARGE,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const AutoSizeText(
+                                "track your first contact",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: ColorPallet.darkBlackColor,
+                                  fontSize: Dimensions.FONT_SIZE_DEFAULT,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const Spacer(),
+                              Transform(
+                                transform: Matrix4.translationValues(-15, 0, 0),
+                                child: Transform.rotate(
+                                  angle: -math.pi / 8,
+                                  child: Image.asset(
+                                    "assets/icons/down-arrow-curved.png",
+                                    color: ColorPallet.primaryColor
+                                        .withOpacity(0.4),
+                                    height: MediaQuery.of(context).size.height *
+                                        0.2,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 50),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: contacts.length,
+                          separatorBuilder: (context, index) => const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 24),
+                            child: Divider(),
+                          ),
+                          itemBuilder: (context, index) {
+                            final contact = contacts[index];
+
+                            return ContactLogItem(
+                              contact: contact,
+                              onDismissed: () async {
+                                contacts.removeWhere((element) =>
+                                    element.identifier == contact.identifier);
+                                await onDelete();
+                                setState(() {});
+                              },
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Future<List<ContactModel>> contactFromDb() async {
-    var box = await openHiveBox(AppConstants.DATABASE_NAME);
+  _loadData() {
+    contactFromDb().then((value) {
+      setState(() {
+        _isLoading = false;
+        contacts = value.reversed.toList();
+      });
+    });
+  }
+
+  Future<List<TrackContactModel>> contactFromDb() async {
+    var box = await openHiveBox(AppConstants.TRACK_CONTACT_DATABASE_NAME);
     // await box.clear();
     print("Db Data --> ${box.get(0)}");
     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
-    List<ContactModel> modelList = [];
+    List<TrackContactModel> modelList = [];
     for (var c in list) {
-      c as ContactModel;
+      c as TrackContactModel;
       modelList.add(c);
     }
 
@@ -92,18 +205,18 @@ class _TrackScreenState extends State<TrackScreen> {
   Future<Box> openHiveBox(String boxName) async {
     if (!kIsWeb && !Hive.isBoxOpen(boxName)) {
       Hive.init((await getApplicationDocumentsDirectory()).path);
-      Hive.registerAdapter(ContactModelAdapter());
+      Hive.registerAdapter(TrackContactModelAdapter());
     }
     return await Hive.openBox(boxName);
   }
 
   onDelete() async {
-    var box = await openHiveBox(AppConstants.DATABASE_NAME);
+    var box = await openHiveBox(AppConstants.TRACK_CONTACT_DATABASE_NAME);
     await box.clear();
-    List<ContactModel> model = [];
+    List<TrackContactModel> model = [];
     for (var element in contacts) {
       model.add(
-        ContactModel(
+        TrackContactModel(
           name: element.name,
           number: element.number ?? "",
           createdDate: DateTime.now(),
@@ -122,7 +235,7 @@ class ContactLogItem extends StatelessWidget {
     required this.onDismissed,
   }) : super(key: key);
 
-  final ContactModel contact;
+  final TrackContactModel contact;
   Function()? onDismissed;
 
   @override

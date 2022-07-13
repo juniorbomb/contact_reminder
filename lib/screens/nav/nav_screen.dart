@@ -72,7 +72,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     showDialog(
       context: context,
       builder: (_) {
-        return ContactPickerDialog();
+        return const ContactPickerDialog();
       },
     );
   }

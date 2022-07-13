@@ -1,23 +1,25 @@
 import 'dart:developer';
+import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:call_log/call_log.dart';
 import 'package:contact_reminder/configs/app_constants.dart';
 import 'package:contact_reminder/configs/colors.dart';
-import 'package:contact_reminder/models/contact.dart';
+import 'package:contact_reminder/models/track_contact_model.dart';
 import 'package:contact_reminder/models/contact_log_model.dart';
 import 'package:contact_reminder/models/log_type.dart';
+import 'package:contact_reminder/services/toast_service.dart';
 import 'package:contact_reminder/widgets/shimmer_view/get_shimmer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sms_inbox/flutter_sms_inbox.dart';
 import 'package:hive/hive.dart';
-import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
 import '../../configs/dimensions.dart';
+import '../../widgets/contact/contact_log_item.dart';
 
 class ContactScreen extends StatefulWidget {
   const ContactScreen({Key? key}) : super(key: key);
@@ -34,7 +36,7 @@ class _ContactScreenState extends State<ContactScreen> {
   bool _isLoading = false;
 
   List<ContactLogModel> historyLog = [];
-  List<ContactModel> numbers = [];
+  List<TrackContactModel> numbers = [];
   List<CallLogEntry> _callLogEntries = [];
 
   @override
@@ -61,25 +63,63 @@ class _ContactScreenState extends State<ContactScreen> {
         header: const WaterDropMaterialHeader(
           color: Colors.white,
           backgroundColor: ColorPallet.primaryColor,
-          offset: -0,
+          offset: 0,
         ),
         onRefresh: _onRefresh,
         controller: _refreshController,
         physics: const AlwaysScrollableScrollPhysics(),
         child: !_isLoading
             ? historyLog.isEmpty
-                ? const Center(
-                    child: Text(
-                      "No contacts found",
-                      style: TextStyle(
-                        fontSize: Dimensions.FONT_SIZE_LARGE,
-                        fontWeight: FontWeight.w600,
-                      ),
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 150),
+                        const Spacer(),
+                        const AutoSizeText(
+                          "No contacts found",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: ColorPallet.darkBlackColor,
+                            fontSize: Dimensions.FONT_SIZE_LARGE,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const AutoSizeText(
+                          "track your first contact",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: ColorPallet.darkBlackColor,
+                            fontSize: Dimensions.FONT_SIZE_DEFAULT,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        const Spacer(),
+                        // const SizedBox(height: 12),
+
+                        Transform(
+                          transform: Matrix4.translationValues(-15, 0, 0),
+                          child: Transform.rotate(
+                            angle: -math.pi / 8,
+                            child: Image.asset(
+                              "assets/icons/down-arrow-curved.png",
+                              color: ColorPallet.primaryColor.withOpacity(0.4),
+                              height: MediaQuery.of(context).size.height * 0.2,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+                      ],
                     ),
                   )
                 : ListView.separated(
                     itemCount: historyLog.length,
-                    separatorBuilder: (context, index) => const Divider(),
+                    separatorBuilder: (context, index) => const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Divider(),
+                    ),
                     itemBuilder: (context, index) {
                       final entry = historyLog[index];
                       return ContactLogItem(
@@ -94,7 +134,10 @@ class _ContactScreenState extends State<ContactScreen> {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: ListView.separated(
                   itemCount: 20,
-                  separatorBuilder: (context, index) => const Divider(),
+                  separatorBuilder: (context, index) => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Divider(),
+                  ),
                   itemBuilder: (context, index) {
                     return getContactShimmer(context, false);
                   },
@@ -129,9 +172,27 @@ class _ContactScreenState extends State<ContactScreen> {
     historyLog.clear();
     numbers.clear();
     numbers = await contactFromDb();
+    Map<Permission, PermissionStatus> permissionStatus = await [
+      Permission.sms,
+      Permission.phone,
+      Permission.contacts,
+    ].request();
+    if (!(permissionStatus[Permission.sms]?.isGranted ?? false)) {
+      ToastService.show("No sms permission");
+    }
+    if (!(permissionStatus[Permission.phone]?.isGranted ?? false)) {
+      ToastService.show("No phone permission");
+    }
+    if (!(permissionStatus[Permission.contacts]?.isGranted ?? false)) {
+      ToastService.show("No contact permission");
+    }
+
     for (var number in numbers) {
-      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number ?? "");
-      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number ?? "");
+      const regex = r'[^\w\\s]+';
+      final reg = RegExp(regex);
+      number.number = (number.number ?? "").replaceAll(reg, '');
+      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number);
+      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number);
 
       ContactLogModel contactLogModel = ContactLogModel(
         callType: CallType.unknown,
@@ -144,8 +205,18 @@ class _ContactScreenState extends State<ContactScreen> {
         sender: "Unknown",
       );
 
-      log(callLogEntry?.number ?? "name");
+      log(number.number ?? "number");
+      if (number.number?.isEmpty ?? true) {
+        continue;
+      }
+
       if (smsMessage != null && callLogEntry != null) {
+        log("name ==>" + number.name.toString());
+        log("sms date ==>" + smsMessage.date.toString());
+        log("sms ==>" + smsMessage.body.toString());
+        log("call date ==>" +
+            DateTime.fromMillisecondsSinceEpoch(callLogEntry.timestamp ?? 0)
+                .toString());
         if (smsMessage.date!
                 .difference(DateTime.fromMillisecondsSinceEpoch(
                     callLogEntry.timestamp ?? 0))
@@ -158,8 +229,15 @@ class _ContactScreenState extends State<ContactScreen> {
             message: smsMessage.body,
             type: Type.sms,
           );
-          historyLog.add(contactLogModel);
-          continue;
+        } else {
+          contactLogModel = contactLogModel.copyWith(
+            callType: callLogEntry.callType,
+            dateTime: DateTime.fromMillisecondsSinceEpoch(
+                callLogEntry.timestamp ?? 0),
+            type: Type.call,
+            duration: callLogEntry.duration,
+            name: callLogEntry.name,
+          );
         }
       } else if (smsMessage != null) {
         contactLogModel = contactLogModel.copyWith(
@@ -169,17 +247,18 @@ class _ContactScreenState extends State<ContactScreen> {
           message: smsMessage.body,
           type: Type.sms,
         );
-        historyLog.add(contactLogModel);
+      } else if (callLogEntry != null) {
+        contactLogModel = contactLogModel.copyWith(
+          callType: callLogEntry.callType,
+          dateTime:
+              DateTime.fromMillisecondsSinceEpoch(callLogEntry.timestamp ?? 0),
+          type: Type.call,
+          duration: callLogEntry.duration,
+          name: callLogEntry.name,
+        );
+      } else {
         continue;
       }
-      contactLogModel = contactLogModel.copyWith(
-        callType: callLogEntry?.callType,
-        dateTime:
-            DateTime.fromMillisecondsSinceEpoch(callLogEntry?.timestamp ?? 0),
-        type: Type.call,
-        duration: callLogEntry?.duration,
-        name: callLogEntry?.name,
-      );
       historyLog.add(contactLogModel);
     }
 
@@ -201,13 +280,12 @@ class _ContactScreenState extends State<ContactScreen> {
 
   Future<CallLogEntry?> _getLastCallLogOf(number) async {
     final status = await Permission.phone.status;
+    CallLogEntry? callLogEntry;
     if (status.isGranted) {
       final result = (await CallLog.query(number: number)).toList();
-      return result.isNotEmpty ? result[0] : null;
-    } else {
-      await Permission.phone.request();
+      callLogEntry = result.isNotEmpty ? result[0] : null;
     }
-    return null;
+    return callLogEntry;
   }
 
   Future<SmsMessage?> _getLastSmsLogOf(number) async {
@@ -222,20 +300,17 @@ class _ContactScreenState extends State<ContactScreen> {
       if (messages.isNotEmpty) {
         message = messages[0];
       }
-    } else {
-      await Permission.sms.request();
     }
     return message;
   }
 
-  Future<List<ContactModel>> contactFromDb() async {
-    var box = await openHiveBox(AppConstants.DATABASE_NAME);
-    // await box.clear();
+  Future<List<TrackContactModel>> contactFromDb() async {
+    var box = await openHiveBox(AppConstants.TRACK_CONTACT_DATABASE_NAME);
 
     List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
-    List<ContactModel> modelList = [];
+    List<TrackContactModel> modelList = [];
     for (var c in list) {
-      c as ContactModel;
+      c as TrackContactModel;
       modelList.add(c);
     }
     return modelList;
@@ -244,70 +319,8 @@ class _ContactScreenState extends State<ContactScreen> {
   Future<Box> openHiveBox(String boxName) async {
     if (!kIsWeb && !Hive.isBoxOpen(boxName)) {
       Hive.init((await getApplicationDocumentsDirectory()).path);
-      Hive.registerAdapter(ContactModelAdapter());
+      Hive.registerAdapter(TrackContactModelAdapter());
     }
     return await Hive.openBox(boxName);
-  }
-}
-
-class ContactLogItem extends StatelessWidget {
-  const ContactLogItem({
-    Key? key,
-    required this.entry,
-  }) : super(key: key);
-
-  final ContactLogModel entry;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        height: 40,
-        width: 40,
-        alignment: Alignment.center,
-        child: Icon(
-          entry.type == Type.call ? Icons.call : Icons.message,
-          color: ColorPallet.secondaryColor,
-        ),
-      ),
-      title: AutoSizeText(
-        entry.name,
-        style: const TextStyle(
-          fontSize: Dimensions.FONT_SIZE_LARGE,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          AutoSizeText(
-            entry.type == Type.call
-                ? entry.number
-                : "Message: " + entry.message,
-            style: TextStyle(
-              color: ColorPallet.blackColor.withOpacity(0.6),
-            ),
-          ),
-          if (entry.type == Type.call) ...[
-            const SizedBox(width: 6),
-            Icon(
-              entry.callType == CallType.incoming
-                  ? Icons.phone_callback
-                  : entry.callType == CallType.outgoing
-                      ? Icons.phone_forwarded
-                      : Icons.phone,
-              color: ColorPallet.blackColor.withOpacity(0.6),
-              size: 12,
-            ),
-          ],
-        ],
-      ),
-      trailing: AutoSizeText(
-        DateFormat("d MMM hh:mm a").format(entry.dateTime),
-        style: TextStyle(
-          color: ColorPallet.blackColor.withOpacity(0.5),
-        ),
-      ),
-    );
   }
 }

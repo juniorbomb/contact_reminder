@@ -1,10 +1,10 @@
 import 'package:hive/hive.dart';
-
-part 'contact.g.dart';
+part 'track_contact.g.dart';
 
 @HiveType(typeId: 0)
-class ContactModel extends HiveObject {
-  ContactModel({this.name, this.number, this.createdDate, this.identifier});
+class TrackContactModel extends HiveObject {
+  TrackContactModel(
+      {this.name, this.number, this.createdDate, this.identifier});
 
   @HiveField(0)
   String? name;

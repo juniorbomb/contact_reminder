@@ -37,12 +37,12 @@ class Style {
   );
 
   static SystemUiOverlayStyle systemUiOverlayStyle = const SystemUiOverlayStyle(
-    systemNavigationBarColor: ColorPallet.backgroundColor,
+    systemNavigationBarColor: ColorPallet.transparent,
     statusBarColor: ColorPallet.transparent,
     systemNavigationBarIconBrightness: Brightness.dark,
 
     // Status bar brightness (optional)
-    statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
+    statusBarIconBrightness: Brightness.light, // For Android (dark icons)
     statusBarBrightness: Brightness.light, // For iOS (dark icons)
   );
 }

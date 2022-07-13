@@ -1,19 +1,18 @@
 import 'dart:developer';
 
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:contact_reminder/configs/app_constants.dart';
-import 'package:contact_reminder/models/contact.dart';
+import 'package:contact_reminder/models/item.dart' as item;
+import 'package:contact_reminder/models/track_contact_model.dart';
 import 'package:contact_reminder/services/databse.dart';
+import 'package:contact_reminder/services/toast_service.dart';
 import 'package:contact_reminder/widgets/theme_text_field.dart';
 import 'package:contacts_service/contacts_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../configs/colors.dart';
 import '../configs/dimensions.dart';
+import '../models/contact_model.dart';
 
 class ContactPickerDialog extends StatefulWidget {
   const ContactPickerDialog({
@@ -25,51 +24,45 @@ class ContactPickerDialog extends StatefulWidget {
 }
 
 class _ContactPickerDialogState extends State<ContactPickerDialog> {
-  final TextEditingController _searchController = TextEditingController();
+  late TextEditingController _searchController;
   final List<Contact> _searchResult = [];
   final List<Contact> reminderContacts = [];
-  late Database _database;
 
   final List<Contact> _contacts = [];
   final List<Contact> _selectedContact = [];
   bool _isInit = true;
 
   @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchController.addListener(searchListener);
+  }
+
+  @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
 
     if (_isInit) {
-      // _database = Database(AppConstants.DATABASE);
-      // _database.getAll();
-      _searchController.addListener(searchListener);
       final status = await Permission.contacts.status;
       if (status.isDenied || status.isPermanentlyDenied) {
         if ((await Permission.contacts.request()) == PermissionStatus.denied ||
             (await Permission.contacts.request()) ==
                 PermissionStatus.permanentlyDenied) {
-          SnackBar snackBar =
-              const SnackBar(content: Text("Contact permission required"));
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          ToastService.show("Contact permission required");
           Navigator.pop(context);
           return;
         }
       }
-      ContactsService.getContacts().then((value) async {
-        _contacts.clear();
-        List<ContactModel> dbList = await contactFromDb();
-        _contacts.addAll(value);
-
-        for (var element in _contacts) {
-          if (dbList.indexWhere((e) => e.identifier == element.identifier) !=
-              -1) {
-            _selectedContact.add(element);
-          }
-        }
-        setState(() {});
-      });
+      _loadData();
     }
     _isInit = false;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -105,12 +98,25 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
               left: 12.0,
               right: 12,
             ),
-            child: ThemeInputField(
-              hint: "Search Name or Number...",
-              icon: Container(),
-              showDivider: false,
-              separatorVisible: false,
-              controller: _searchController,
+            child: Row(
+              children: [
+                Expanded(
+                  child: ThemeInputField(
+                    hint: "Search Name or Number...",
+                    icon: Container(),
+                    showDivider: false,
+                    separatorVisible: false,
+                    controller: _searchController,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () async {
+                    await _updateContactsToDB();
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.refresh),
+                )
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -139,25 +145,30 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                 )
               : Expanded(
                   child: _searchController.text.isNotEmpty
-                      ? ListView.builder(
+                      ? ListView.separated(
                           itemCount: _searchResult.length,
+                          separatorBuilder: (context, index) => const Divider(),
                           itemBuilder: (context, index) {
-                            final contact = _searchResult[0];
+                            final contact = _searchResult[index];
                             return ListTile(
-                              key: ValueKey(index),
+                              key: ValueKey(contact.identifier),
                               leading: Checkbox(
                                 checkColor: ColorPallet.whiteColor,
                                 activeColor: ColorPallet.primaryColor,
                                 // fillColor: ColorPallet.primaryColor,
-
                                 key: ValueKey(index),
                                 value: _selectedContact.indexWhere(
                                         (element) =>
                                             element.identifier ==
-                                            _contacts[index].identifier,
+                                            _searchResult[index].identifier,
                                         0) !=
                                     -1,
-                                onChanged: (value) => onChange(value, index),
+                                onChanged: (value) => onChange(
+                                  value,
+                                  _contacts.indexWhere((element) =>
+                                      element.identifier ==
+                                      _searchResult[index].identifier),
+                                ),
                               ),
                               title: AutoSizeText(
                                 contact.displayName.toString(),
@@ -179,12 +190,16 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                             );
                           },
                         )
-                      : ListView.builder(
+                      : ListView.separated(
                           itemCount: _contacts.length,
+                          separatorBuilder: (context, index) => const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 24),
+                            child: Divider(),
+                          ),
                           itemBuilder: (context, index) {
                             final contact = _contacts[index];
                             return ListTile(
-                              key: ValueKey(index),
+                              key: ValueKey(contact.identifier),
                               leading: Checkbox(
                                 checkColor: ColorPallet.whiteColor,
                                 activeColor: ColorPallet.primaryColor,
@@ -224,10 +239,18 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: ColorPallet.primaryColor,
-              ),
+                  minimumSize: Size.fromHeight(45),
+                  primary: ColorPallet.primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  )),
               onPressed: onSave,
-              child: const Text("Save"),
+              child: const Text(
+                "Save",
+                style: TextStyle(
+                  fontSize: Dimensions.FONT_SIZE_LARGE,
+                ),
+              ),
             ),
           ),
         ],
@@ -235,18 +258,44 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
     );
   }
 
+  _loadData() async {
+    _contacts.clear();
+    final result = await getContactsFromDB();
+
+    if (result.isNotEmpty) {
+      log("fetching contacts");
+
+      _contacts.addAll(result.map((e) => Contact.fromMap(e.toMap())).toList());
+    } else {
+      log("updating contact...");
+      await _updateContactsToDB();
+    }
+    setState(() {});
+
+    List<TrackContactModel> trackContacts = await getTrackContacts();
+
+    for (var element in _contacts) {
+      if (trackContacts.indexWhere((e) => e.identifier == element.identifier) !=
+          -1) {
+        _selectedContact.add(element);
+      }
+    }
+
+    setState(() {});
+  }
+
   searchListener() {
+    _searchResult.clear();
     if (_contacts.isEmpty) {
       return;
     }
     final searchText = _searchController.text;
-    _searchResult.clear();
     if (searchText.isEmpty) {
       setState(() {});
       return;
     }
     log(searchText);
-    _searchResult.addAll(_contacts
+    final result = _contacts
         .where((element) =>
             (element.displayName
                     ?.toLowerCase()
@@ -255,7 +304,9 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
             ((element.phones?.length ?? 0) > 0
                 ? element.phones?.first.value?.contains(searchText) ?? false
                 : false))
-        .toList());
+        .toList();
+    log(result.map((e) => e.displayName).toString());
+    _searchResult.addAll(result);
     setState(() {});
   }
 
@@ -269,40 +320,86 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
     setState(() {});
   }
 
-  Future<Box> openHiveBox(String boxName) async {
-    if (!kIsWeb && !Hive.isBoxOpen(boxName)) {
-      Hive.init((await getApplicationDocumentsDirectory()).path);
-      Hive.registerAdapter(ContactModelAdapter());
-    }
-    return await Hive.openBox(boxName);
+  Future _updateContactsToDB() async {
+    _contacts.clear();
+    var box = await Database.openContactBox();
+    await box.clear();
+    setState(() {});
+    _contacts.addAll(await ContactsService.getContacts());
+
+    List<ContactModel> updatedContacts = [];
+    updatedContacts = _contacts
+        .map((e) => ContactModel(
+              identifier: e.identifier,
+              displayName: e.displayName,
+              givenName: e.givenName,
+              middleName: e.middleName,
+              prefix: e.prefix,
+              suffix: e.suffix,
+              familyName: e.familyName,
+              company: e.company,
+              jobTitle: e.jobTitle,
+              emails: e.emails
+                  ?.map<item.Item>(
+                      (e) => item.Item(label: e.label, value: e.value))
+                  .toList(),
+              phones: e.phones
+                  ?.map<item.Item>(
+                      (e) => item.Item(label: e.label, value: e.value))
+                  .toList(),
+              avatar: e.avatar,
+              birthday: e.birthday,
+              androidAccountTypeRaw: e.androidAccountTypeRaw,
+              androidAccountName: e.androidAccountName,
+            ))
+        .toList();
+
+    final key = await box.add(updatedContacts.toList());
+    return;
   }
 
-  Future<List<ContactModel>> contactFromDb() async {
-    var box = await openHiveBox(AppConstants.DATABASE_NAME);
-    List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
-    List<ContactModel> modelList = [];
+  Future<List<ContactModel>> getContactsFromDB() async {
+    var box = await Database.openContactBox();
+    List<dynamic> list =
+        box.isNotEmpty ? (await box.get(0) ?? []) : []; // 1 - contacts
+
+    List<ContactModel> contacts = [];
     for (var c in list) {
       c as ContactModel;
+      contacts.add(c);
+    }
+    return contacts;
+  }
+
+  Future<List<TrackContactModel>> getTrackContacts() async {
+    var box = await Database.openTrackBox();
+    List<dynamic> list =
+        box.isNotEmpty ? (await box.get(0) ?? []) : []; // 0 - track contacts
+    List<TrackContactModel> modelList = [];
+    for (var c in list) {
+      c as TrackContactModel;
       modelList.add(c);
     }
     return modelList;
   }
 
   onSave() async {
-    var box = await openHiveBox(AppConstants.DATABASE_NAME);
+    var box = await Database.openTrackBox();
     await box.clear();
-    List<ContactModel> model = [];
-    _selectedContact.forEach((element) {
-      print("identifier --> ${element.identifier}");
-      model.add(ContactModel(
+    List<TrackContactModel> trackContacts = [];
+    for (var element in _selectedContact) {
+      trackContacts.add(
+        TrackContactModel(
           name: element.displayName,
           number: (element.phones?.isNotEmpty ?? false)
               ? element.phones?.first.value
               : "",
           createdDate: DateTime.now(),
-          identifier: element.identifier));
-    });
-    await box.add(model);
+          identifier: element.identifier,
+        ),
+      );
+    }
+    await box.add(trackContacts);
     Navigator.pop(context);
   }
 }
