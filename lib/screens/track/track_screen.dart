@@ -26,11 +26,16 @@ class _TrackScreenState extends State<TrackScreen> {
   bool _isLoading = false;
 
   @override
-  void didChangeDependencies() async {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
     _isLoading = true;
     setState(() {});
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() async {
+    super.didChangeDependencies();
   }
 
   @override
@@ -64,18 +69,7 @@ class _TrackScreenState extends State<TrackScreen> {
                     onPressed: () {
                       ToastService.show("Long press to remove all");
                     },
-                    onLongPress: () async {
-                      try {
-                        final box = await Database.openTrackBox();
-                        await box.clear();
-                        ToastService.show("Clear");
-                        await _loadData();
-                        setState(() {});
-                      } on Exception catch (e) {
-                        ToastService.show(
-                            "Something went wrong! try again later");
-                      }
-                    },
+                    onLongPress: _removeAll,
                     child: const Text(
                       "Remove all",
                       style: TextStyle(
@@ -112,7 +106,10 @@ class _TrackScreenState extends State<TrackScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(height: 150 - 8),
+                              SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.2 -
+                                          8),
                               const Spacer(),
                               const AutoSizeText(
                                 "No contacts found",
@@ -191,8 +188,7 @@ class _TrackScreenState extends State<TrackScreen> {
   Future<List<TrackContactModel>> contactFromDb() async {
     var box = await openHiveBox(AppConstants.TRACK_CONTACT_DATABASE_NAME);
     // await box.clear();
-    print("Db Data --> ${box.get(0)}");
-    List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
+    List<dynamic> list = box.isNotEmpty ? (await box.get(0) ?? []) : [];
     List<TrackContactModel> modelList = [];
     for (var c in list) {
       c as TrackContactModel;
@@ -218,13 +214,25 @@ class _TrackScreenState extends State<TrackScreen> {
       model.add(
         TrackContactModel(
           name: element.name,
-          number: element.number ?? "",
+          numbers: element.numbers ?? [],
           createdDate: DateTime.now(),
           identifier: element.identifier,
         ),
       );
     }
     await box.add(model);
+  }
+
+  _removeAll() async {
+    try {
+      final box = await Database.openTrackBox();
+      await box.clear();
+      ToastService.show("Clear");
+      await _loadData();
+      setState(() {});
+    } on Exception catch (e) {
+      ToastService.show("Something went wrong! try again later");
+    }
   }
 }
 
@@ -322,10 +330,12 @@ class ContactLogItem extends StatelessWidget {
         subtitle: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            AutoSizeText(
-              contact.number ?? "+0 0000000000",
-              style: TextStyle(
-                color: ColorPallet.blackColor.withOpacity(0.6),
+            Flexible(
+              child: Text(
+                contact.numbers?.join(", ").toString() ?? "",
+                style: TextStyle(
+                  color: ColorPallet.blackColor.withOpacity(0.6),
+                ),
               ),
             ),
           ],

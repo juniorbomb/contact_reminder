@@ -2,7 +2,7 @@ import 'package:call_log/call_log.dart';
 import 'package:contact_reminder/models/log_type.dart';
 
 class ContactLogModel {
-  final String number;
+  final List<String> numbers;
   final String name;
   final String sender;
   final String message;
@@ -12,7 +12,7 @@ class ContactLogModel {
   final CallType callType; // receive send missed
 
   ContactLogModel({
-    required this.number,
+    required this.numbers,
     required this.message,
     required this.sender,
     required this.duration,
@@ -23,7 +23,7 @@ class ContactLogModel {
   });
 
   ContactLogModel copyWith({
-    String? number,
+    List<String>? numbers,
     String? name,
     String? sender,
     String? message,
@@ -39,7 +39,7 @@ class ContactLogModel {
       duration: duration ?? this.duration,
       message: message ?? this.message,
       name: name ?? this.name,
-      number: number ?? this.number,
+      numbers: numbers ?? this.numbers,
       type: type ?? this.type,
     );
   }

@@ -31,6 +31,7 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
   final List<Contact> _contacts = [];
   final List<Contact> _selectedContact = [];
   bool _isInit = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -42,8 +43,9 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
   @override
   void didChangeDependencies() async {
     super.didChangeDependencies();
-
     if (_isInit) {
+      _isLoading = true;
+      setState(() {});
       final status = await Permission.contacts.status;
       if (status.isDenied || status.isPermanentlyDenied) {
         if ((await Permission.contacts.request()) == PermissionStatus.denied ||
@@ -54,7 +56,9 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
           return;
         }
       }
-      _loadData();
+      await _loadData();
+      _isLoading = false;
+      setState(() {});
     }
     _isInit = false;
   }
@@ -111,8 +115,13 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                 ),
                 IconButton(
                   onPressed: () async {
+                    setState(() {
+                      _isLoading = true;
+                    });
                     await _updateContactsToDB();
-                    setState(() {});
+                    setState(() {
+                      _isLoading = false;
+                    });
                   },
                   icon: const Icon(Icons.refresh),
                 )
@@ -120,7 +129,7 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          _contacts.isEmpty
+          _isLoading
               ? SizedBox(
                   height: MediaQuery.of(context).size.height * 0.3,
                   child: Center(
@@ -143,107 +152,133 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                     ),
                   ),
                 )
-              : Expanded(
-                  child: _searchController.text.isNotEmpty
-                      ? ListView.separated(
-                          itemCount: _searchResult.length,
-                          separatorBuilder: (context, index) => const Divider(),
-                          itemBuilder: (context, index) {
-                            final contact = _searchResult[index];
-                            return ListTile(
-                              key: ValueKey(contact.identifier),
-                              leading: Checkbox(
-                                checkColor: ColorPallet.whiteColor,
-                                activeColor: ColorPallet.primaryColor,
-                                // fillColor: ColorPallet.primaryColor,
-                                key: ValueKey(index),
-                                value: _selectedContact.indexWhere(
-                                        (element) =>
-                                            element.identifier ==
-                                            _searchResult[index].identifier,
-                                        0) !=
-                                    -1,
-                                onChanged: (value) => onChange(
-                                  value,
-                                  _contacts.indexWhere((element) =>
-                                      element.identifier ==
-                                      _searchResult[index].identifier),
-                                ),
-                              ),
-                              title: AutoSizeText(
-                                contact.displayName.toString(),
-                                style: const TextStyle(
-                                  fontSize: Dimensions.FONT_SIZE_LARGE,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: (contact.phones == null ||
-                                      (contact.phones?.isEmpty ?? false))
-                                  ? null
-                                  : AutoSizeText(
-                                      contact.phones!.first.value.toString(),
-                                      style: TextStyle(
-                                        color: ColorPallet.blackColor
-                                            .withOpacity(0.6),
-                                      ),
-                                    ),
-                            );
-                          },
-                        )
-                      : ListView.separated(
-                          itemCount: _contacts.length,
-                          separatorBuilder: (context, index) => const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24),
-                            child: Divider(),
+              : _contacts.isEmpty
+                  ? SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.3,
+                      child: const Center(
+                        child: AutoSizeText(
+                          "You don't have any contacts",
+                          style: TextStyle(
+                            color: ColorPallet.primaryColor,
+                            fontSize: Dimensions.FONT_SIZE_LARGE,
+                            fontWeight: FontWeight.w600,
                           ),
-                          itemBuilder: (context, index) {
-                            final contact = _contacts[index];
-                            return ListTile(
-                              key: ValueKey(contact.identifier),
-                              leading: Checkbox(
-                                checkColor: ColorPallet.whiteColor,
-                                activeColor: ColorPallet.primaryColor,
-                                // fillColor: ColorPallet.primaryColor,
-
-                                key: ValueKey(index),
-                                value: _selectedContact.indexWhere(
-                                        (element) =>
-                                            element.phones ==
-                                            _contacts[index].phones,
-                                        0) !=
-                                    -1,
-                                onChanged: (value) => onChange(value, index),
-                              ),
-                              title: AutoSizeText(
-                                contact.displayName.toString(),
-                                style: const TextStyle(
-                                  fontSize: Dimensions.FONT_SIZE_LARGE,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: (contact.phones == null ||
-                                      (contact.phones?.isEmpty ?? false))
-                                  ? null
-                                  : AutoSizeText(
-                                      contact.phones!.first.value.toString(),
-                                      style: TextStyle(
-                                        color: ColorPallet.blackColor
-                                            .withOpacity(0.6),
-                                      ),
-                                    ),
-                            );
-                          },
                         ),
-                ),
+                      ),
+                    )
+                  : Expanded(
+                      child: _searchController.text.isNotEmpty
+                          ? ListView.separated(
+                              itemCount: _searchResult.length,
+                              separatorBuilder: (context, index) =>
+                                  const Divider(),
+                              itemBuilder: (context, index) {
+                                final contact = _searchResult[index];
+                                return ListTile(
+                                  key: ValueKey(contact.identifier),
+                                  leading: Checkbox(
+                                    checkColor: ColorPallet.whiteColor,
+                                    activeColor: ColorPallet.primaryColor,
+                                    // fillColor: ColorPallet.primaryColor,
+                                    key: ValueKey(index),
+                                    value: _selectedContact.indexWhere(
+                                            (element) =>
+                                                element.identifier ==
+                                                _searchResult[index].identifier,
+                                            0) !=
+                                        -1,
+                                    onChanged: (value) => onChange(
+                                      value,
+                                      _contacts.indexWhere((element) =>
+                                          element.identifier ==
+                                          _searchResult[index].identifier),
+                                    ),
+                                  ),
+                                  title: AutoSizeText(
+                                    contact.displayName.toString(),
+                                    style: const TextStyle(
+                                      fontSize: Dimensions.FONT_SIZE_LARGE,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: (contact.phones == null ||
+                                          (contact.phones?.isEmpty ?? false))
+                                      ? null
+                                      : AutoSizeText(
+                                          contact.phones!
+                                              .map((e) => e.value)
+                                              .toList()
+                                              .join(", ")
+                                              .toString(),
+                                          style: TextStyle(
+                                            color: ColorPallet.blackColor
+                                                .withOpacity(0.6),
+                                          ),
+                                        ),
+                                );
+                              },
+                            )
+                          : ListView.separated(
+                              itemCount: _contacts.length,
+                              separatorBuilder: (context, index) =>
+                                  const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 24),
+                                child: Divider(),
+                              ),
+                              itemBuilder: (context, index) {
+                                final contact = _contacts[index];
+                                return ListTile(
+                                  key: ValueKey(contact.identifier),
+                                  leading: Checkbox(
+                                    checkColor: ColorPallet.whiteColor,
+                                    activeColor: ColorPallet.primaryColor,
+                                    // fillColor: ColorPallet.primaryColor,
+
+                                    key: ValueKey(index),
+                                    value: _selectedContact.indexWhere(
+                                            (element) =>
+                                                element.identifier ==
+                                                _contacts[index].identifier,
+                                            0) !=
+                                        -1,
+                                    onChanged: (value) =>
+                                        onChange(value, index),
+                                  ),
+                                  title: AutoSizeText(
+                                    contact.displayName.toString(),
+                                    style: const TextStyle(
+                                      fontSize: Dimensions.FONT_SIZE_LARGE,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: (contact.phones == null ||
+                                          (contact.phones?.isEmpty ?? false))
+                                      ? null
+                                      : AutoSizeText(
+                                          contact.phones!
+                                              .map((e) => e.value)
+                                              .toList()
+                                              .join(", ")
+                                              .toString(),
+                                          style: TextStyle(
+                                            color: ColorPallet.blackColor
+                                                .withOpacity(0.6),
+                                          ),
+                                        ),
+                                );
+                              },
+                            ),
+                    ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  minimumSize: Size.fromHeight(45),
-                  primary: ColorPallet.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  )),
+                minimumSize: const Size.fromHeight(45),
+                primary: ColorPallet.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
               onPressed: onSave,
               child: const Text(
                 "Save",
@@ -302,7 +337,13 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
                     .contains(searchText.toLowerCase()) ??
                 false) ||
             ((element.phones?.length ?? 0) > 0
-                ? element.phones?.first.value?.contains(searchText) ?? false
+                ? element.phones
+                        ?.map((e) => e.value)
+                        .toList()
+                        .join(", ")
+                        .toString()
+                        .contains(searchText) ??
+                    false
                 : false))
         .toList();
     log(result.map((e) => e.displayName).toString());
@@ -321,15 +362,19 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
   }
 
   Future _updateContactsToDB() async {
-    _contacts.clear();
-    var box = await Database.openContactBox();
-    await box.clear();
-    setState(() {});
-    _contacts.addAll(await ContactsService.getContacts());
+    try {
+      _isLoading = true;
+      _contacts.clear();
+      setState(() {});
+      var box = await Database.openContactBox();
+      await box.clear();
+      _contacts.addAll(await ContactsService.getContacts());
 
-    List<ContactModel> updatedContacts = [];
-    updatedContacts = _contacts
-        .map((e) => ContactModel(
+      List<ContactModel> updatedContacts = [];
+      updatedContacts = [..._contacts]
+          .toList()
+          .map(
+            (e) => ContactModel(
               identifier: e.identifier,
               displayName: e.displayName,
               givenName: e.givenName,
@@ -351,10 +396,17 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
               birthday: e.birthday,
               androidAccountTypeRaw: e.androidAccountTypeRaw,
               androidAccountName: e.androidAccountName,
-            ))
-        .toList();
+            ),
+          )
+          .toList();
 
-    final key = await box.add(updatedContacts.toList());
+      await box.add(updatedContacts.toList());
+    } on Exception catch (e) {
+      log("Exception", error: e);
+      ToastService.show(e.toString());
+    }
+    _isLoading = false;
+    setState(() {});
     return;
   }
 
@@ -391,9 +443,8 @@ class _ContactPickerDialogState extends State<ContactPickerDialog> {
       trackContacts.add(
         TrackContactModel(
           name: element.displayName,
-          number: (element.phones?.isNotEmpty ?? false)
-              ? element.phones?.first.value
-              : "",
+          numbers:
+              element.phones?.map<String>((e) => e.value ?? "").toList() ?? [],
           createdDate: DateTime.now(),
           identifier: element.identifier,
         ),

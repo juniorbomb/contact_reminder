@@ -18,7 +18,7 @@ class TrackContactModelAdapter extends TypeAdapter<TrackContactModel> {
     };
     return TrackContactModel(
       name: fields[0] as String?,
-      number: fields[1] as String?,
+      numbers: (fields[1] as List?)?.cast<String>(),
       createdDate: fields[2] as DateTime?,
       identifier: fields[3] as String?,
     );
@@ -31,7 +31,7 @@ class TrackContactModelAdapter extends TypeAdapter<TrackContactModel> {
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.number)
+      ..write(obj.numbers)
       ..writeByte(2)
       ..write(obj.createdDate)
       ..writeByte(3)

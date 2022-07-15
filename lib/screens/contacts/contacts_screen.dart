@@ -38,6 +38,7 @@ class _ContactScreenState extends State<ContactScreen> {
   List<ContactLogModel> historyLog = [];
   List<TrackContactModel> numbers = [];
   List<CallLogEntry> _callLogEntries = [];
+  List<SmsMessage> _smsEntries = [];
 
   @override
   void initState() {
@@ -74,7 +75,8 @@ class _ContactScreenState extends State<ContactScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 150),
+                        SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.2),
                         const Spacer(),
                         const AutoSizeText(
                           "No contacts found",
@@ -124,7 +126,7 @@ class _ContactScreenState extends State<ContactScreen> {
                       final entry = historyLog[index];
                       return ContactLogItem(
                         entry: entry,
-                        key: ValueKey(entry.number),
+                        key: ValueKey(entry.numbers),
                       );
                     },
                     shrinkWrap: true,
@@ -169,6 +171,7 @@ class _ContactScreenState extends State<ContactScreen> {
   _loadData() async {
     setState(() => _isLoading = true);
     await _getCallLogs();
+    await _getSMSLogs();
     historyLog.clear();
     numbers.clear();
     numbers = await contactFromDb();
@@ -188,11 +191,21 @@ class _ContactScreenState extends State<ContactScreen> {
     }
 
     for (var number in numbers) {
-      const regex = r'[^\w\\s]+';
-      final reg = RegExp(regex);
-      number.number = (number.number ?? "").replaceAll(reg, '');
-      CallLogEntry? callLogEntry = await _getLastCallLogOf(number.number);
-      SmsMessage? smsMessage = await _getLastSmsLogOf(number.number);
+      if (number.numbers?.isEmpty ?? true) {
+        continue;
+      }
+      const regexString = r"[^0-9+]"; // ^\w\s -- remove all special char
+      final reg = RegExp(regexString);
+      number.numbers =
+          number.numbers?.map((e) => e.replaceAll(reg, '')).toList() ?? [];
+
+      print("Number ==>" + (number.numbers?.join(", ").toString() ?? "try"));
+      CallLogEntry? callLogEntry =
+          await _getLastCallLogOf(number.numbers ?? []);
+      SmsMessage? smsMessage = await _getLastSmsLogOf(number.numbers ?? []);
+
+      print("sms ==>" + (smsMessage?.address ?? "address"));
+      print("sms ==>" + (smsMessage?.body ?? "address"));
 
       ContactLogModel contactLogModel = ContactLogModel(
         callType: CallType.unknown,
@@ -200,23 +213,16 @@ class _ContactScreenState extends State<ContactScreen> {
         duration: 0,
         message: "Unknown",
         name: number.name ?? "",
-        number: number.number ?? "",
+        numbers: number.numbers ?? [],
         type: Type.call,
         sender: "Unknown",
       );
 
-      log(number.number ?? "number");
-      if (number.number?.isEmpty ?? true) {
-        continue;
-      }
-
       if (smsMessage != null && callLogEntry != null) {
-        log("name ==>" + number.name.toString());
-        log("sms date ==>" + smsMessage.date.toString());
-        log("sms ==>" + smsMessage.body.toString());
-        log("call date ==>" +
-            DateTime.fromMillisecondsSinceEpoch(callLogEntry.timestamp ?? 0)
-                .toString());
+        print("name ==>" + number.name.toString());
+        print("sms date ==>" + smsMessage.date.toString());
+        print("sms ==>" + smsMessage.body.toString());
+
         if (smsMessage.date!
                 .difference(DateTime.fromMillisecondsSinceEpoch(
                     callLogEntry.timestamp ?? 0))
@@ -227,6 +233,7 @@ class _ContactScreenState extends State<ContactScreen> {
             name: callLogEntry.name,
             dateTime: smsMessage.date!,
             message: smsMessage.body,
+            numbers: [smsMessage.address ?? "unknown"],
             type: Type.sms,
           );
         } else {
@@ -236,6 +243,7 @@ class _ContactScreenState extends State<ContactScreen> {
                 callLogEntry.timestamp ?? 0),
             type: Type.call,
             duration: callLogEntry.duration,
+            numbers: [callLogEntry.number ?? "unknown"],
             name: callLogEntry.name,
           );
         }
@@ -245,6 +253,7 @@ class _ContactScreenState extends State<ContactScreen> {
           name: number.name,
           dateTime: smsMessage.date!,
           message: smsMessage.body,
+          numbers: [smsMessage.address ?? "unknown"],
           type: Type.sms,
         );
       } else if (callLogEntry != null) {
@@ -254,6 +263,7 @@ class _ContactScreenState extends State<ContactScreen> {
               DateTime.fromMillisecondsSinceEpoch(callLogEntry.timestamp ?? 0),
           type: Type.call,
           duration: callLogEntry.duration,
+          numbers: [callLogEntry.number ?? "unknown"],
           name: callLogEntry.name,
         );
       } else {
@@ -278,36 +288,58 @@ class _ContactScreenState extends State<ContactScreen> {
     }
   }
 
-  Future<CallLogEntry?> _getLastCallLogOf(number) async {
-    final status = await Permission.phone.status;
-    CallLogEntry? callLogEntry;
+  _getSMSLogs() async {
+    var status = await Permission.sms.status;
     if (status.isGranted) {
-      final result = (await CallLog.query(number: number)).toList();
-      callLogEntry = result.isNotEmpty ? result[0] : null;
+      final result = await _query.getAllSms;
+      _smsEntries = result.toList();
     }
+  }
+
+  Future<CallLogEntry?> _getLastCallLogOf(List<String> numbers) async {
+    CallLogEntry? callLogEntry;
+    const regex = r"[^0-9+]";
+    final reg = RegExp(regex);
+    List<CallLogEntry> result = [];
+    for (var call in _callLogEntries) {
+      for (var num in numbers) {
+        if (call.number?.replaceAll(reg, "").contains(num) ?? false) {
+          print("match sms numbers ==> ${call.number?.replaceAll(reg, "")}");
+          result.add(call);
+        }
+      }
+    }
+
+    result.sort((a, b) =>
+        b.timestamp
+            ?.compareTo(a.timestamp ?? DateTime.now().millisecondsSinceEpoch) ??
+        0);
+    callLogEntry = result.isNotEmpty ? result[0] : null;
     return callLogEntry;
   }
 
-  Future<SmsMessage?> _getLastSmsLogOf(number) async {
+  Future<SmsMessage?> _getLastSmsLogOf(List<String> numbers) async {
     SmsMessage? message;
-    var permission = await Permission.sms.status;
-    if (permission.isGranted) {
-      final messages = await _query.querySms(
-        kinds: [SmsQueryKind.inbox, SmsQueryKind.sent],
-        address: number,
-        count: 0,
-      );
-      if (messages.isNotEmpty) {
-        message = messages[0];
+    const regex = r"[^0-9+]";
+    final reg = RegExp(regex);
+    List<SmsMessage> result = [];
+    for (var sms in _smsEntries) {
+      for (var num in numbers) {
+        if (sms.address?.replaceAll(reg, "").contains(num) ?? false) {
+          result.add(sms);
+          print("match sms numbers ==> ${sms.address?.replaceAll(reg, "")}");
+        }
       }
     }
+    result.sort((a, b) => b.date?.compareTo(a.date ?? DateTime.now()) ?? 0);
+    message = result.isNotEmpty ? result[0] : null;
     return message;
   }
 
   Future<List<TrackContactModel>> contactFromDb() async {
     var box = await openHiveBox(AppConstants.TRACK_CONTACT_DATABASE_NAME);
 
-    List<dynamic> list = box.isNotEmpty ? await box.get(0) : [];
+    List<dynamic> list = box.isNotEmpty ? (await box.get(0) ?? []) : [];
     List<TrackContactModel> modelList = [];
     for (var c in list) {
       c as TrackContactModel;

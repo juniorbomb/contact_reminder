@@ -56,7 +56,7 @@ class _ContactLogItemState extends State<ContactLogItem> {
           Flexible(
             child: Text(
               widget.entry.type == Type.call
-                  ? widget.entry.number
+                  ? widget.entry.numbers.join(",")
                   : "Message: " + widget.entry.message,
               maxLines: _isExpanded ? null : 1,
               overflow: _isExpanded ? null : TextOverflow.ellipsis,
